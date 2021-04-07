@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 import numpy as np
 
 def create_padding_mask(seq, padding_idx):
-    return (seq == padding_idx).unsqueeze(-2)
+    return (seq == padding_idx).unsqueeze(-2).unsqueeze(-2)
 
 def get_subsequent_mask(seq):
     sz_b, len_s = seq.size()
@@ -55,6 +55,8 @@ class MultiHeadAttention(nn.Module):
     def scaled_dot_product_attention(self, query, key, value, mask):
         scores = torch.matmul(query, key.permute(0, 1, 3, 2)) / np.sqrt(self.d_model // self.n_heads)
         if mask is not None:
+            print(scores.shape)
+            print(mask.shape)
             mask = torch.as_tensor(mask, dtype=torch.bool)
             scores.masked_fill_(mask, -1e9)
         attention = torch.softmax(scores, dim=-1)
@@ -173,9 +175,18 @@ class Transformer(nn.Module):
         dec_outputs = self.decoder(dec_inputs, enc_outputs, dec_lookahead_mask, dec_padding_mask)
         return dec_outputs
 
-X = torch.rand(1, 50, 128)
-X2 = torch.rand(1, 50, 128)
+
+k = torch.zeros(32, 50)
+msk = create_padding_mask(k, 1)
+msk_2 = get_subsequent_mask(k)
+
+X = torch.rand(32, 50, 128)
+X2 = torch.rand(32, 50, 128)
+
 transformer = Transformer(128, 2,  8, 1024, 0.1)
-y = transformer(X, X2, None, None, None)
+y = transformer(X, X2, msk, None, None)
 
 y.shape
+
+pos_encoding = PositionalEncoding(128, 0.1, 50)
+pos_encoding(X)
